@@ -2,9 +2,8 @@ version: 2.1
 orbs:
   python: circleci/python@1.5.0
   heroku: circleci/heroku@1.2.6
-
-executors:
-  my-executor:
+jobs:
+  build_and_test: # this can be any name you choose
     docker:
       - image: cimg/python:3.10.1
         environment:
@@ -13,43 +12,20 @@ executors:
         environment:
           POSTGRES_USER: root
           POSTGRES_DB: circle_test
-          
-jobs:
-  build_and_test: # this can be any name you choose
-    executor: my-executor
-    resource_class: medium
-    parallelism: 2
     steps:
       - checkout
-      - setup_remote_docker:
-          docker_layer_caching: true
-
-      - restore_cache:
-          name: Restore project's cache
-          key: py_cache-v2-{{ checksum "requirements.txt" }}
-
       - python/install-packages:
           pkg-manager: pipenv
-      
       - run:
           name: Run tests
           command: |
-             pip install --upgrade pip
-             pip install pytest-cov
-             pip install --upgrade setuptools
-             TESTFILES=$(circleci tests glob "catalog/tests/*.py" | sed 's/\S\+__init__.py//g')
-             echo $TESTFILES | tr ' ' '\n' | sort | uniq > circleci_test_files.txt
-             cat circleci_test_files.txt
-             TESTFILES=$(circleci tests split --split-by=timings circleci_test_files.txt)
-             TESTFILES=$(echo $TESTFILES | tr "/" "." | sed 's/\.py$//g')
-             echo $TESTFILES 
-             pipenv run python manage.py test $TESTFILES
-             #pipenv run python manage.py test
-      
-      - save_cache:
-          key: py_cache-v2-{{ checksum "requirements.txt" }}
-          paths:
-            - /home/circleci/py_cache       
+            TESTFILES=$(circleci tests glob "catalog/tests/*.py" | sed 's/\S\+__init__.py//g')
+            echo $TESTFILES | tr ' ' '\n' | sort | uniq > circleci_test_files.txt
+            cat circleci_test_files.txt
+            TESTFILES=$(circleci tests split --split-by=timings circleci_test_files.txt)
+            TESTFILES=$(echo $TESTFILES | tr "/" "." | sed 's/\.py$//g')
+            echo $TESTFILES 
+            pipenv run python manage.py test $TESTFILES # alternatively run `python -m pytest` if you are running vanilla pytest
       - store_test_results:
           path: test-results
       - store_artifacts:
