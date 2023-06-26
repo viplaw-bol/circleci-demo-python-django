@@ -12,6 +12,7 @@ jobs:
         environment:
           POSTGRES_USER: root
           POSTGRES_DB: circle_test
+    parallelism: 2
     steps:
       - checkout
       - python/install-packages:
