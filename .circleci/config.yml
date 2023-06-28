@@ -24,12 +24,8 @@ commands:
     steps:
       - checkout
       - restore_cache_cmd
-      - run:
-          name: "install dependencies"
-          command: |
-             pip install --upgrade pip
-             pip install pytest-cov
-             pip install --upgrade setuptools
+      - python/install-packages:
+          pkg-manager: pipenv
       - save_cache_cmd
 
 
