@@ -1,4 +1,5 @@
 version: 2.1
+setup: true
 orbs:
   python: circleci/python@1.5.0
   heroku: circleci/heroku@1.2.6
@@ -41,17 +42,41 @@ executors:
           POSTGRES_DB: circle_test
           
 jobs:
+  prepare-dependencies:
+    executor: my-executor
+    resource_class: medium
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - python-deps-{{ checksum "requirements.txt" }}
+            - python-deps
+      - build
+      - save_cache:
+         key: python-deps-{{ checksum "requirements.txt" }}
+         paths:
+            - ~/.cache/pip
+      - persist_to_workspace:
+          root: .
+          paths:
+              - .
+  
   build_and_test: # this can be any name you choose
     executor: my-executor
     resource_class: medium
     #parallelism: 2
     steps:
-      - build
+      #- build
+      - attach_workspace:
+          at: .
       - run:
           name: Run tests
           command: |
              pipenv run python manage.py test
-      
+      - persist_to_workspace:
+          root: .
+          paths:
+              - .
  
   deploy: # this can be any name you choose
     docker:
@@ -64,7 +89,10 @@ jobs:
 workflows:
   on_commit:
     jobs:
-      - build_and_test
+      - prepare-dependencies
+      - build_and_test:
+            requires:
+              - prepare-dependencies
       # Follow instructions here to authenticate git for Heroku: https://devcenter.heroku.com/articles/git#http-git-authentication
       # The following code may be uncommented, onnce HEROKU_API_KEY & HEROKU_APP_NAME environemnt variables are present
       # Read more: https://circleci.com/docs/2.0/env-vars/
